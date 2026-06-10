@@ -99,7 +99,8 @@ def init_db():
             nama_ar_visit TEXT,
             nomor_nd TEXT,
             tgl_nd TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            tgl_upload TEXT
         )
     """)
     conn.execute("""
@@ -117,6 +118,11 @@ def init_db():
     except:
         pass
     # Add ND columns if not exists
+    try:
+        conn.execute("ALTER TABLE kasus ADD COLUMN tgl_upload TEXT")
+        conn.commit()
+    except:
+        pass
     try:
         conn.execute("ALTER TABLE kasus ADD COLUMN nomor_nd TEXT")
         conn.commit()
@@ -159,7 +165,8 @@ def init_db():
             aksi TEXT NOT NULL,
             detail TEXT,
             dilakukan_oleh TEXT,
-            created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+            tgl_upload TEXT
         )
     """)
     conn.commit()
@@ -448,13 +455,14 @@ async def upload_excel(file: UploadFile = File(...), username: str = Form("")):
                     INSERT INTO kasus (nomor_kasus, npwp, nama_wp, jenis_kasus, status_kasus,
                         sumber_kasus, tgl_dibuat, dibuat_oleh, tgl_ditutup, langkah,
                         tgl_jatuh_tempo, kantor_wilayah, kpp,
-                        tgl_permohonan, deadline_bpe, deadline_penelitian, pic)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                        tgl_permohonan, deadline_bpe, deadline_penelitian, pic, tgl_upload)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
                 """, (nomor, clean(npwp), nama_wp, clean(jenis), clean(status),
                       clean(sumber), tgl_dibuat_clean, clean(dibuat_oleh),
                       clean_date(tgl_ditutup), clean(langkah),
                       clean_date(tgl_jatuh_tempo), clean(kantor_wilayah), clean(kpp),
-                      tgl_dibuat_clean, deadline_bpe, deadline_penelitian, pic_nama))
+                      tgl_dibuat_clean, deadline_bpe, deadline_penelitian, pic_nama,
+                      __import__('datetime').date.today().isoformat()))
                 berhasil += 1
             except sqlite3.IntegrityError:
                 pass
