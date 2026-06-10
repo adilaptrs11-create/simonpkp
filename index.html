@@ -1671,7 +1671,7 @@ async function uploadExcel(input){
   const file=input.files[0];if(!file)return;
   const msg=document.getElementById('upload-msg');
   msg.textContent='⏳ Mengupload dan membaca file...';msg.style.color='var(--muted)';
-  const formData=new FormData();formData.append('file',file);
+  const formData=new FormData();formData.append('file',file);formData.append('username',currentUser?.username||'');
   try{
     const res=await fetch(API+'/api/upload-excel',{method:'POST',body:formData});
     const json=await res.json();
