@@ -1323,9 +1323,12 @@ function getPegawaiOptions(tipe,selected){
 
 function makeTable(rows,showAssign=true,showVisit=false){
   if(!rows.length)return'<div class="empty-msg">Tidak ada data.</div>';
+  const isMonitor=currentUser?.role==='Monitor';
+  const canAssign=showAssign&&!isMonitor;
   return`<table><thead><tr>
     <th>No. Kasus</th><th>Nama WP</th><th>Sumber</th><th>Status</th>
     <th>PIC</th><th>AR</th>
+    <th>Tgl. Upload</th>
     <th>Deadline BPE</th><th>Sisa HK BPE</th>
     <th>Deadline Penelitian</th><th>Sisa HK Penelitian</th>
     <th>No. LAP</th><th>Tgl. Selesai</th>
@@ -1338,8 +1341,9 @@ function makeTable(rows,showAssign=true,showVisit=false){
       <td style="font-weight:600;max-width:150px;">${d.nama_wp||'—'}</td>
       <td>${sumberBadge(d.sumber_kasus)}</td>
       <td>${statusBadge(d.status_kasus||'Diproses')}</td>
-      <td>${showAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','pic',this.value)"><option value="">— PIC</option>${getPegawaiOptions('PIC',d.pic)}</select>`:d.pic||'—'}</td>
-      <td>${showAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','ar',this.value)"><option value="">— AR</option>${getPegawaiOptions('AR',d.ar)}</select>`:d.ar||'—'}</td>
+      <td>${canAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','pic',this.value)"><option value="">— PIC</option>${getPegawaiOptions('PIC',d.pic)}</select>`:d.pic||'—'}</td>
+      <td>${canAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','ar',this.value)"><option value="">— AR</option>${getPegawaiOptions('AR',d.ar)}</select>`:d.ar||'—'}</td>
+      <td style="font-size:11px;color:var(--muted);">${fmt(d.tgl_upload)||'—'}</td>
       <td>${fmt(d.deadline_bpe)}</td>
       <td class="${hkClass(d.sisa_hk_bpe,done)}">${hkText(d.sisa_hk_bpe,done)}</td>
       <td>${fmt(d.deadline_penelitian)}</td>
