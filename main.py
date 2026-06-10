@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException, UploadFile, File
+from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -385,7 +385,11 @@ def tambah_kasus(data: KasusInput):
     return {"message": "Kasus berhasil ditambahkan"}
 
 @app.post("/api/upload-excel")
-async def upload_excel(file: UploadFile = File(...)):
+async def upload_excel(file: UploadFile = File(...), username: str = Form("")):
+    conn_user = get_db()
+    user_row = conn_user.execute("SELECT nama FROM users WHERE username=?", (username,)).fetchone()
+    pic_nama = user_row["nama"] if user_row else ""
+    conn_user.close()
     contents = await file.read()
     try:
         df = pd.read_excel(io.BytesIO(contents))
@@ -393,6 +397,7 @@ async def upload_excel(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Gagal baca file: {str(e)}")
     berhasil = 0
     duplikat = 0
+    diupdate = 0
     conn = get_db()
     for _, row in df.iterrows():
         nomor = str(row.get("Nomor Kasus", "")).strip()
@@ -427,24 +432,35 @@ async def upload_excel(file: UploadFile = File(...)):
                 deadline_penelitian = tambah_hari_kerja(date.fromisoformat(deadline_bpe), 10).isoformat()
             except: pass
 
-        try:
+        existing = conn.execute("SELECT id FROM kasus WHERE nomor_kasus=?", (nomor,)).fetchone()
+        if existing:
             conn.execute("""
-                INSERT INTO kasus (nomor_kasus, npwp, nama_wp, jenis_kasus, status_kasus,
-                    sumber_kasus, tgl_dibuat, dibuat_oleh, tgl_ditutup, langkah,
-                    tgl_jatuh_tempo, kantor_wilayah, kpp,
-                    tgl_permohonan, deadline_bpe, deadline_penelitian)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            """, (nomor, clean(npwp), nama_wp, clean(jenis), clean(status),
-                  clean(sumber), tgl_dibuat_clean, clean(dibuat_oleh),
-                  clean_date(tgl_ditutup), clean(langkah),
+                UPDATE kasus SET status_kasus=?, tgl_ditutup=?, langkah=?,
+                    tgl_jatuh_tempo=?, kantor_wilayah=?, kpp=?, npwp=?
+                WHERE nomor_kasus=?
+            """, (clean(status), clean_date(tgl_ditutup), clean(langkah),
                   clean_date(tgl_jatuh_tempo), clean(kantor_wilayah), clean(kpp),
-                  tgl_dibuat_clean, deadline_bpe, deadline_penelitian))
-            berhasil += 1
-        except sqlite3.IntegrityError:
-            duplikat += 1
+                  clean(npwp), nomor))
+            diupdate += 1
+        else:
+            try:
+                conn.execute("""
+                    INSERT INTO kasus (nomor_kasus, npwp, nama_wp, jenis_kasus, status_kasus,
+                        sumber_kasus, tgl_dibuat, dibuat_oleh, tgl_ditutup, langkah,
+                        tgl_jatuh_tempo, kantor_wilayah, kpp,
+                        tgl_permohonan, deadline_bpe, deadline_penelitian, pic)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, (nomor, clean(npwp), nama_wp, clean(jenis), clean(status),
+                      clean(sumber), tgl_dibuat_clean, clean(dibuat_oleh),
+                      clean_date(tgl_ditutup), clean(langkah),
+                      clean_date(tgl_jatuh_tempo), clean(kantor_wilayah), clean(kpp),
+                      tgl_dibuat_clean, deadline_bpe, deadline_penelitian, pic_nama))
+                berhasil += 1
+            except sqlite3.IntegrityError:
+                pass
     conn.commit()
     conn.close()
-    return {"message": f"{berhasil} kasus berhasil diimport, {duplikat} duplikat dilewati"}
+    return {"message": f"{berhasil} kasus baru diimport, {diupdate} kasus diupdate"}
 
 @app.put("/api/kasus/{nomor_kasus}/assign")
 def assign_pegawai(nomor_kasus: str, data: AssignPegawai):
