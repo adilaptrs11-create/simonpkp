@@ -296,11 +296,16 @@ tr:hover td{background:#F5F5FF;}
       <div id="page-dashboard" class="page active">
         <div class="metrics" id="metrics"></div>
         <div class="row3" id="deadline-row"></div>
-        <div class="row-3-1">
-          <div class="cbox">
+        <div class="row-3-1" id="dashboard-donut-row">
+          <div class="cbox" id="donut-status-box">
             <div class="cbox-title">🍩 Status Kasus</div>
             <div style="position:relative;height:160px;"><canvas id="donutChart"></canvas></div>
             <div id="donut-legend" style="display:flex;flex-direction:column;gap:5px;margin-top:10px;"></div>
+          </div>
+          <div class="cbox" id="donut-visit-box" style="display:none;">
+            <div class="cbox-title">🗺️ Status Visit AR</div>
+            <div style="position:relative;height:160px;"><canvas id="donutVisitDashboard"></canvas></div>
+            <div id="donut-visit-dashboard-legend" style="display:flex;flex-direction:column;gap:5px;margin-top:10px;"></div>
           </div>
           <div class="cbox">
             <div class="cbox-title">📅 Tren Kasus Per Bulan</div>
@@ -1214,6 +1219,7 @@ function cekDeadlineNotif(){
 
 function renderAll(){
   renderMetrics();renderDeadlineRow();renderDonut();renderTrend();
+  renderDashboardDonut();
   renderBarPic();renderBarAr();renderDashboardTable();renderCalendar();
   const urgent=allKasus.filter(d=>isDiproses(d)&&((d.sisa_hk_penelitian!==null&&d.sisa_hk_penelitian<=5)||(d.sisa_hk_bpe!==null&&d.sisa_hk_bpe<=5))).length;
   document.getElementById('badge-urgent').textContent=urgent;
@@ -1254,6 +1260,63 @@ function renderDonut(){
     }
   });
   document.getElementById('donutChart').style.cursor='pointer';
+}
+
+let donutVisitDashInst=null;
+function renderDashboardDonut(){
+  const role=currentUser?.role||'admin';
+  const isKasiPengawasan=role==='Monitor'&&(currentUser?.username||'').startsWith('kasi_pengawasan');
+  const isAR=role==='AR';
+  const isAdmin=role==='admin';
+
+  const statusBox=document.getElementById('donut-status-box');
+  const visitBox=document.getElementById('donut-visit-box');
+  const donutRow=document.getElementById('dashboard-donut-row');
+
+  if(isAdmin){
+    // Admin: 2 pie charts - ubah layout jadi row2
+    donutRow.style.gridTemplateColumns='1fr 1fr 2fr';
+    statusBox.style.display='';
+    visitBox.style.display='';
+  } else if(isAR||isKasiPengawasan){
+    // AR & Kasi Pengawasan: hanya visit donut
+    statusBox.style.display='none';
+    visitBox.style.display='';
+    donutRow.style.gridTemplateColumns='1fr 2fr';
+  } else {
+    // PIC & Kasi Pelayanan: hanya status kasus
+    statusBox.style.display='';
+    visitBox.style.display='none';
+    donutRow.style.gridTemplateColumns='1fr 2fr';
+  }
+
+  if(visitBox.style.display!=='none'){
+    const sudah=allKasus.filter(d=>d.tgl_visit).length;
+    const belum=allKasus.filter(d=>d.deadline_ar&&!d.tgl_visit).length;
+    const belumDeadline=allKasus.filter(d=>!d.deadline_ar).length;
+    document.getElementById('donut-visit-dashboard-legend').innerHTML=`
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);"><div style="width:9px;height:9px;border-radius:2px;background:#1D6A72;flex-shrink:0;"></div>Sudah visit — ${sudah}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);"><div style="width:9px;height:9px;border-radius:2px;background:#B45309;flex-shrink:0;"></div>Belum visit — ${belum}</div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--muted);"><div style="width:9px;height:9px;border-radius:2px;background:#94A3B8;flex-shrink:0;"></div>Belum dikabulkan — ${belumDeadline}</div>`;
+    if(donutVisitDashInst)donutVisitDashInst.destroy();
+    donutVisitDashInst=new Chart(document.getElementById('donutVisitDashboard'),{
+      type:'doughnut',
+      data:{labels:['Sudah visit','Belum visit','Belum dikabulkan'],datasets:[{data:[sudah,belum,belumDeadline],backgroundColor:['#1D6A72','#B45309','#94A3B8'],borderWidth:0,borderRadius:3,hoverOffset:8}]},
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{display:false}},
+        onClick:(e,els)=>{
+          if(!els.length)return;
+          const idx=els[0].index;
+          let filtered;
+          const labels=['Sudah visit','Belum visit (ada deadline)','Belum dikabulkan'];
+          if(idx===0) filtered=allKasus.filter(d=>d.tgl_visit);
+          else if(idx===1) filtered=allKasus.filter(d=>d.deadline_ar&&!d.tgl_visit);
+          else filtered=allKasus.filter(d=>!d.deadline_ar);
+          bukaArPieDetail(labels[idx],filtered);
+        }
+      }
+    });
+    document.getElementById('donutVisitDashboard').style.cursor='pointer';
+  }
 }
 
 function renderTrend(){
