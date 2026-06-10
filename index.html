@@ -1352,9 +1352,9 @@ function makeTable(rows,showAssign=true,showVisit=false){
       <td>${fmt(d.tgl_selesai)}</td>
       ${showVisit?`<td>${fmt(d.deadline_ar)}</td><td class="${hkClass(d.sisa_hk_ar,!!d.tgl_visit)}">${hkText(d.sisa_hk_ar,!!d.tgl_visit)}</td><td>${fmt(d.tgl_visit)||'—'}</td><td>${d.nama_ar_visit||'—'}</td>`:''}
       <td style="white-space:nowrap;">
-        ${!done?`<button class="btn-sm btn-update" onclick="bukaModal('${d.nomor_kasus}','${(d.nama_wp||'').replace(/'/g,"\\'")}')">Update</button>`:''}
-        ${d.deadline_ar&&!d.tgl_visit?`<button class="btn-sm btn-visit" style="margin-left:3px;" onclick="bukaModalVisit('${d.nomor_kasus}','${(d.nama_wp||'').replace(/'/g,"\\'")}','${d.deadline_ar||''}')">Visit</button>`:''}
-        <button class="btn-sm btn-del" style="margin-left:3px;" onclick="hapusKasus('${d.nomor_kasus}')">Hapus</button>
+        ${!isMonitor&&!done?`<button class="btn-sm btn-update" onclick="bukaModal('${d.nomor_kasus}','${(d.nama_wp||'').replace(/'/g,"\\'")}')">Update</button>`:''}
+        ${!isMonitor&&d.deadline_ar&&!d.tgl_visit?`<button class="btn-sm btn-visit" style="margin-left:3px;" onclick="bukaModalVisit('${d.nomor_kasus}','${(d.nama_wp||'').replace(/'/g,"\\'")}','${d.deadline_ar||''}')">Visit</button>`:''}
+        ${!isMonitor?`<button class="btn-sm btn-del" style="margin-left:3px;" onclick="hapusKasus('${d.nomor_kasus}')">Hapus</button>`:''}
       </td>
     </tr>`;
   }).join('')}</tbody></table>`;
