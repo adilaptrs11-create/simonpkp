@@ -611,6 +611,8 @@ tr:hover td{background:#F5F5FF;}
     </div>
     <div class="modal-ff"><label>Tanggal Visit</label><input type="date" id="v-tgl"></div>
     <div class="modal-ff"><label>Nomor LAP</label><input type="text" id="v-lap" placeholder="Nomor laporan hasil penelitian..."></div>
+    <div class="modal-ff"><label>Dokumentasi Visit</label><input type="file" id="v-foto" accept="image/*" style="padding:4px;font-size:11px;"></div>
+    <div id="v-foto-preview" style="display:none;margin-top:6px;"><img id="v-foto-img" style="max-width:100%;max-height:150px;border-radius:6px;border:1px solid var(--border);"></div>
     <div class="modal-note">Deadline Visit AR: <span id="v-deadline" style="font-weight:700;color:var(--navy);">—</span></div>
     <div class="modal-actions">
       <button class="btn-primary" onclick="simpanVisit()">Simpan</button>
@@ -1392,6 +1394,7 @@ function makeTable(rows,showAssign=true,showVisit=false){
     <th>No. Kasus</th><th>Nama WP</th><th>Sumber</th><th>Status</th>
     <th>PIC</th><th>AR</th>
     <th>Tgl. Upload</th>
+    <th>Dokumentasi</th>
     <th>Deadline BPE</th><th>Sisa HK BPE</th>
     <th>Deadline Penelitian</th><th>Sisa HK Penelitian</th>
     <th>No. LAP</th><th>Tgl. Selesai</th>
@@ -1407,6 +1410,7 @@ function makeTable(rows,showAssign=true,showVisit=false){
       <td>${canAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','pic',this.value)"><option value="">— PIC</option>${getPegawaiOptions('PIC',d.pic)}</select>`:d.pic||'—'}</td>
       <td>${canAssign?`<select class="assign-sel" onchange="assignPegawai('${d.nomor_kasus}','ar',this.value)"><option value="">— AR</option>${getPegawaiOptions('AR',d.ar)}</select>`:d.ar||'—'}</td>
       <td style="font-size:11px;color:var(--muted);">${fmt(d.tgl_upload)||'—'}</td>
+      <td>${d.foto_visit?`<a href="${d.foto_visit}" target="_blank" style="color:var(--teal-mid);font-size:11px;font-weight:700;">📷 Lihat</a>`:'—'}</td>
       <td>${fmt(d.deadline_bpe)}</td>
       <td class="${hkClass(d.sisa_hk_bpe,done)}">${hkText(d.sisa_hk_bpe,done)}</td>
       <td>${fmt(d.deadline_penelitian)}</td>
@@ -1747,6 +1751,18 @@ async function uploadExcel(input){
   }catch{msg.textContent='❌ Gagal upload.';msg.style.color='var(--red)';}
 }
 
+document.getElementById('v-foto').addEventListener('change',function(){
+  const file=this.files[0];
+  if(file){
+    const reader=new FileReader();
+    reader.onload=e=>{
+      document.getElementById('v-foto-img').src=e.target.result;
+      document.getElementById('v-foto-preview').style.display='block';
+    };
+    reader.readAsDataURL(file);
+  }
+});
+
 async function assignPegawai(nomor,tipe,nilai){
   const body=tipe==='pic'?{pic:nilai}:{ar:nilai};
   await fetch(API+'/api/kasus/'+nomor+'/assign',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
@@ -1844,6 +1860,8 @@ function bukaModalVisit(nomor,nama,deadlineAr){
   document.getElementById('modal-visit-sub').textContent=nomor+' — '+nama;
   document.getElementById('v-nama').value='';document.getElementById('v-tgl').value='';
   document.getElementById('v-lap').value='';
+  document.getElementById('v-foto').value='';
+  document.getElementById('v-foto-preview').style.display='none';
   document.getElementById('v-deadline').textContent=fmt(deadlineAr);
   document.getElementById('modal-visit-msg').style.display='none';
   document.getElementById('modal-visit-bg').classList.add('open');
@@ -1877,10 +1895,19 @@ async function simpanVisit(){
   const nama=document.getElementById('v-nama').value;
   const tgl=document.getElementById('v-tgl').value;
   const lap=document.getElementById('v-lap').value;
+  const fotoInput=document.getElementById('v-foto');
   const msg=document.getElementById('modal-visit-msg');
   if(!nama||!tgl){showMsg(msg,'Nama AR dan tanggal wajib diisi!','err');return;}
+  let fotoBase64=null;
+  if(fotoInput.files&&fotoInput.files[0]){
+    fotoBase64=await new Promise(res=>{
+      const r=new FileReader();
+      r.onload=e=>res(e.target.result);
+      r.readAsDataURL(fotoInput.files[0]);
+    });
+  }
   const res=await fetch(API+'/api/kasus/'+modalNomor+'/visit',{method:'PUT',headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({tgl_visit:tgl,nama_ar_visit:nama,nomor_lap:lap||null})});
+    body:JSON.stringify({tgl_visit:tgl,nama_ar_visit:nama,nomor_lap:lap||null,foto_visit:fotoBase64||null})});
   if(res.ok){tutupModal('modal-visit-bg');loadKasus();}
   else showMsg(msg,'Gagal simpan.','err');
 }
