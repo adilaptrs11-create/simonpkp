@@ -97,6 +97,7 @@ def init_db():
             nomor_lap TEXT,
             tgl_visit TEXT,
             nama_ar_visit TEXT,
+            foto_visit TEXT,
             nomor_nd TEXT,
             tgl_nd TEXT,
             created_at TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -118,6 +119,11 @@ def init_db():
     except:
         pass
     # Add ND columns if not exists
+    try:
+        conn.execute("ALTER TABLE kasus ADD COLUMN foto_visit TEXT")
+        conn.commit()
+    except:
+        pass
     try:
         conn.execute("ALTER TABLE kasus ADD COLUMN tgl_upload TEXT")
         conn.commit()
@@ -195,6 +201,7 @@ class UpdateVisitAR(BaseModel):
     tgl_visit: str
     nama_ar_visit: str
     nomor_lap: Optional[str] = None
+    foto_visit: Optional[str] = None
 
 class AssignPegawai(BaseModel):
     pic: Optional[str] = None
@@ -503,9 +510,9 @@ def update_status(nomor_kasus: str, data: UpdateStatus):
 def update_visit(nomor_kasus: str, data: UpdateVisitAR):
     conn = get_db()
     conn.execute("""
-        UPDATE kasus SET tgl_visit=?, nama_ar_visit=?, nomor_lap=?
+        UPDATE kasus SET tgl_visit=?, nama_ar_visit=?, nomor_lap=?, foto_visit=?
         WHERE nomor_kasus=?
-    """, (data.tgl_visit, data.nama_ar_visit, data.nomor_lap, nomor_kasus))
+    """, (data.tgl_visit, data.nama_ar_visit, data.nomor_lap, data.foto_visit, nomor_kasus))
     tulis_log(conn, nomor_kasus, "Visit AR", f"Visit dilakukan oleh {data.nama_ar_visit} pada {data.tgl_visit}", data.nama_ar_visit)
     conn.commit()
     conn.close()
