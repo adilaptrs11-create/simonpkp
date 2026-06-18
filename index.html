@@ -1176,7 +1176,7 @@ async function loadKasus(){
     const res=await fetch(API+'/api/kasus');
     let data=await res.json();
     if(currentUser?.role==='PIC') data=data.filter(d=>d.pic===currentUser.nama);
-    else if(currentUser?.role==='AR') data=data.filter(d=>d.ar===currentUser.nama||d.hasil==='Dikabulkan');
+    else if(currentUser?.role==='AR') data=data.filter(d=>d.ar===currentUser.nama);
     allKasus=data;renderAll();
   }
   catch{allKasus=offlineKasus;renderAll();}
