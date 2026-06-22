@@ -1176,7 +1176,7 @@ async function loadKasus(){
     const res=await fetch(API+'/api/kasus');
     let data=await res.json();
     if(currentUser?.role==='PIC') data=data.filter(d=>d.pic===currentUser.nama);
-    else if(currentUser?.role==='AR') data=data.filter(d=>d.ar===currentUser.nama);
+    else if(currentUser?.role==='AR') data=data.filter(d=>d.ar===currentUser.nama||d.hasil==='Dikabulkan');
     allKasus=data;renderAll();
   }
   catch{allKasus=offlineKasus;renderAll();}
@@ -1616,6 +1616,7 @@ function renderPerAr(){
   if(selTbl){const def=selTbl.options[0].outerHTML;selTbl.innerHTML=def;arNames.forEach(n=>{const o=document.createElement('option');o.value=n;o.textContent=n;selTbl.appendChild(o);});}
 
   document.getElementById('tbl-perar').innerHTML=makeTable(sortKasus(allKasus.filter(d=>d.ar)),false,true);
+  renderArDonut();
 }
 
 function filterArTable(ar){
